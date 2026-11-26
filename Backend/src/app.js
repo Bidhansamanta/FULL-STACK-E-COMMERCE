@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 // Data Base Connect 
 import connectDB from "./config/connectDB.js";
 
+// Auth User Router
+import userRouter from "./routes/auth.route.js";
+
 dotenv.config({
   path: "./.env",
 });
@@ -22,6 +25,9 @@ app.use(
 );
 
 app.use(cookieParser());
+
+// Auth User Route
+app.use("/api/v1/user", userRouter);
 
 // Data Base Call
 connectDB();
