@@ -1,3 +1,4 @@
+import { uploadOnCloudinary } from "../config/cloudinary.js";
 import { Product } from "../models/product.model.js";
 import { asyncHandler } from "../utils/asyncHanlder.js";
 
@@ -33,6 +34,13 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error("This product already exists");
   }
 
+  // Image URL Create
+  const imageURL = await uploadOnCloudinary(req.file.path);
+
+  if (!imageURL) {
+    throw new Error("Image upload failed");
+  }
+
   // Generate SKU
   const sku = await genarateSKU(category);
 
@@ -44,6 +52,7 @@ const createProduct = asyncHandler(async (req, res) => {
     category,
     stock,
     sku,
+    image: imageURL.secure_url,
   });
 
   // Send response

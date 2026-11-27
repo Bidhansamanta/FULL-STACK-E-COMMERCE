@@ -7,36 +7,30 @@ const productSchema = new Schema(
       required: true,
       trim: true,
     },
-
     description: {
       type: String,
       required: true,
       trim: true,
     },
-
     image: {
       type: String,
-      default: "",
+      required: true,
     },
-
     price: {
       type: Number,
       required: true,
       min: 0,
     },
-
     category: {
       type: String,
       required: true,
       trim: true,
     },
-
     stock: {
       type: Number,
       required: true,
       min: 0,
     },
-
     sku: {
       type: String,
       unique: true,
