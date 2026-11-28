@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   deleteUser,
+  forgotPassword,
   getAllUser,
   getProfile,
   getUserById,
@@ -25,5 +26,6 @@ router.route("/all-user/:userId").get(verifyJWT, getUserById);
 router.route("/all-user/:userId").get(verifyJWT, checkRole, getProfile);
 router.route("/update-user/:userId").put(updateUser);
 router.route("/delete-user/:userId").delete(deleteUser);
+router.route("/forgot-password").post(forgotPassword);
 
 export default router;

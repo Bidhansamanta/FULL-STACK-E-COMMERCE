@@ -2,27 +2,45 @@ import { User } from "../models/user.model.js";
 import { asyncHandler } from "../utils/asyncHanlder.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
 
 // Register User
 const registerUser = asyncHandler(async (req, res) => {
+  const { userName, email, password } = req.body;
+
+  if (!userName || !email || !password) {
+    throw new Error("All field are required to procced");
+  }
+
+  const isEmailAlreadyExtis = await User.findOne({ email });
+
+  if (isEmailAlreadyExtis) {
+    throw new Error("This Email are Already Exits");
+  }
+
+  const newUser = await User.create({
+    userName,
+    email,
+    password,
+  });
   try {
-    const { userName, email, password } = req.body;
-
-    if (!userName || !email || !password) {
-      throw new Error("All field are required to procced");
-    }
-
-    const isEmailAlreadyExtis = await User.findOne({ email });
-
-    if (isEmailAlreadyExtis) {
-      throw new Error("This Email are Already Exits");
-    }
-
-    const newUser = await User.create({
-      userName,
-      email,
-      password,
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAILTRAP_HOST,
+      port: Number(process.env.MAILTRAP_PORT),
+      auth: {
+        user: process.env.MAILTRAP_USERNAME,
+        pass: process.env.MAILTRAP_PASSWORD,
+      },
     });
+
+    const mailtrapOptions = {
+      from: process.env.MAILTRAP_SENDEREMAIL,
+      to: email,
+      subject: `${userName} Registered Successfully`,
+      text: `Hello ${userName},Welcome to our website! Your account has been registered successfully. Thank you for joining us.Best Regards,Our Team`,
+    };
+
+    await transporter.sendMail(mailtrapOptions);
 
     return res
       .status(201)
@@ -113,27 +131,26 @@ const getAllUser = asyncHandler(async (req, res) => {
   }
 });
 
-
 // Get User By Id
-const getUserById = asyncHandler(async (req,res) => {
+const getUserById = asyncHandler(async (req, res) => {
   try {
-    const {userId} = req.params;
+    const { userId } = req.params;
 
-    if(!userId){
+    if (!userId) {
       throw new Error("User Id Not Found");
-    };
+    }
 
     const user = await User.findById(userId).select("-password -refreshToken");
 
-    if(!user){
+    if (!user) {
       throw new Error("User Not Found");
     }
 
-    return res.status(200).json({message :"User Fetch Successfully", user});
+    return res.status(200).json({ message: "User Fetch Successfully", user });
   } catch (error) {
     throw new Error("Internal Server Error", error);
   }
-})
+});
 
 // Get Profile
 const getProfile = asyncHandler(async (req, res) => {
@@ -207,6 +224,54 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
+// Forgot Password
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new Error("Email is Required");
+  }
+
+  const requestedUser = await User.findOne({ email });
+
+  if (!requestedUser) {
+    throw new Error("Requested Email Not found");
+  }
+
+  const { unHashToken, hashToken, tokenExpiry } =
+    requestedUser.genarateTemporaryToken();
+
+  requestedUser.forgotPassword = hashToken;
+  requestedUser.forgotPasswordTokenExpiry = tokenExpiry;
+  await requestedUser.save({ validateBeforeSave: false });
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.MAILTRAP_HOST,
+      port: Number(process.env.MAILTRAP_PORT),
+      auth: {
+        user: process.env.MAILTRAP_USERNAME,
+        pass: process.env.MAILTRAP_PASSWORD,
+      },
+    });
+
+    const mailtrapOptions = {
+      from: process.env.MAILTRAP_SENDEREMAIL,
+      to: requestedUser.email,
+      subject: "Reset Password Request",
+      text: `Please use the following link to reset your password : ${process.env.BASE_URL}/api/v1/user/reset-password/${unHashToken}. \n\n This link will expire in 20 minutes. \n\n If you didn't requested to reset your password then please ignore this message`,
+    };
+
+    await transporter.sendMail(mailtrapOptions);
+
+    return res
+      .status(200)
+      .json({ message: `Email send Successfully, ${requestedUser.email}` });
+  } catch (error) {
+    throw new Error("Internal Server Error", error);
+  }
+});
+
 export {
   registerUser,
   loginUser,
@@ -216,4 +281,5 @@ export {
   getProfile,
   updateUser,
   deleteUser,
+  forgotPassword,
 };
